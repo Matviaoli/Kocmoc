@@ -1,3 +1,5 @@
+package kocmoc;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -21,7 +23,7 @@ public class Nebulabrasque extends JFrame {
     private JScrollPane xstep;
     private JComboBox<String> sequestro;
 
-    private boolean menu = false, especifico = false, aura = false;
+    private boolean menu = false, especifico = false, aura = false, criacao = false;
 
     public Nebulabrasque(){
 
@@ -252,191 +254,167 @@ public class Nebulabrasque extends JFrame {
 
     }
 
-    private void remake(String type, int id){
+    private void remake(String type, int id) {
+    pipoquinha.removeAll();
+    especifico = true;
+    menu = false;
+    aura = false;
 
-        pipoquinha.removeAll();
-        especifico = true;
-        menu = false;
-        aura = false;
+    StringBuilder builder = new StringBuilder();
+    java.util.List<String> producoes = new ArrayList<>();
 
-        StringBuilder builder = new StringBuilder();
+    try (Connection conext = DriverManager.getConnection(dbUrl, dbUser, dbPass)) {
+        PreparedStatement semata;
+        ResultSet hahaha;
 
-        java.util.List<String> producoes = new ArrayList<>();
-        //adicionar imagem depois
+        if (type.equals("Produções")) {
+            java.util.List<String> elencados = new ArrayList<>();
+            java.util.List<String> generos = new ArrayList<>();
 
-        try(Connection conext = DriverManager.getConnection(dbUrl, dbUser, dbPass)){
-            PreparedStatement semata;
-            ResultSet hahaha;
+            semata = conext.prepareStatement(
+                "SELECT p.titulo_producoes, p.data_producoes, p.numepisodios_producoes, d.nome_diretor " +
+                "FROM producoes p LEFT JOIN diretores d ON p.id_diretor = d.id_diretor " +
+                "WHERE p.id_producoes = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
 
-            if (type.equals("Produções")) {
-
-                java.util.List<String> elencados = new ArrayList<>();
-                java.util.List<String> generos = new ArrayList<>();
-
-                semata = conext.prepareStatement(
-                "SELECT p.titulo_producoes, p.data_producoes, d.nome_diretor " +
-                    "FROM producoes p LEFT JOIN diretores d ON p.id_diretor = d.id_diretor " +
-                    "WHERE p.id_producoes = ?"
-                );
-
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-
-                if(hahaha.next()){
-
-                    builder.append("Título: ").append(hahaha.getString("titulo_producoes")).append("\n");
-                    builder.append("Data: ").append(hahaha.getDate("data_producoes")).append("\n");
-                    String ditador = hahaha.getString("nome_diretor");
-                    builder.append("Diretor: ").append(ditador != null ? ditador : "Desconhecido").append("\n\n");
-
-
-
-                    //adicionar função de poster depois
-
+            if (hahaha.next()) {
+                builder.append("Título: ").append(hahaha.getString("titulo_producoes")).append("\n");
+                builder.append("Data: ").append(hahaha.getDate("data_producoes")).append("\n");
+                String ditador = hahaha.getString("nome_diretor");
+                builder.append("Diretor: ").append(ditador != null ? ditador : "Desconhecido").append("\n");
+                int numEpisodios = hahaha.getInt("numepisodios_producoes");
+                if (hahaha.wasNull() || numEpisodios == 0) {
+                    builder.append("Tipo: Filme").append("\n\n");
+                } else {
+                    builder.append("Tipo: Série (").append(numEpisodios).append(" episódios)\n\n");
                 }
-
-
-                semata = conext.prepareStatement(
-                "SELECT g.nome_genero FROM genero g " +
-                    "JOIN producoes_generos pg ON g.id_genero = pg.id_genero " +
-                    "WHERE pg.id_producoes = ?"
-                );
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-                while (hahaha.next()){
-
-                    generos.add(hahaha.getString("nome_genero"));
-
-                }
-
-                builder.append("Gêneros: ").append(generos.isEmpty() ? "Nenhum gênero associado" : String.join(", ", generos)).append("\n\n");
-
-
-                semata = conext.prepareStatement("" +
-                    "SELECT a.nome_atores FROM atores a " +
-                    "JOIN producoes_atores pa ON a.id_atores = pa.id_atores " +
-                    "WHERE pa.id_producoes = ?"
-                );
-
-                while (hahaha.next()){
-
-                    elencados.add(hahaha.getString("nome_atores"));
-
-                }
-
-                builder.append("Elenco: ").append(elencados.isEmpty() ? "Nenhum ator associado" : String.join(", ", elencados)).append("\n\n");
-
-            }else if(type.equals("Diretores")){
-
-                semata = conext.prepareStatement(
-                "SELECT nome_diretor, nascimento_diretor, mandado_para_o_lobby_diretor " +
-                    "FROM diretores WHERE id_diretor = ?"
-                );
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-                if(hahaha.next()){
-
-                    String nome = hahaha.getString("nome_diretor");
-                    Date nascimento = hahaha.getDate("nascimento_diretor");
-                    Date falecimento = hahaha.getDate("mandado_para_o_lobby_diretor");
-
-                    builder.append("Nome: ").append(nome).append("\n");
-                    builder.append("Nascimento: ").append(nascimento).append("\n");
-
-                    LocalDate nascimentoDate = nascimento.toLocalDate();
-                    LocalDate dataFinal = falecimento != null ? falecimento.toLocalDate() : LocalDate.now();
-                    int idade = Period.between(nascimentoDate, dataFinal).getYears();
-                    builder.append("Idade: ").append(idade).append(falecimento != null ? " (na data de falecimento)" : "").append("\n");
-
-                    if (falecimento != null) {
-                        builder.append("Faleceu em: ").append(falecimento).append("\n");
-                    } else {
-                        builder.append("Estado: Vivo").append("\n");
-                    }
-
-                }
-
-                semata = conext.prepareStatement(
-                "SELECT titulo_producoes FROM producoes WHERE id_diretor = ?"
-                );
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-
-                while(hahaha.next()){
-
-                    producoes.add(hahaha.getString("titulo_producoes"));
-
-                }
-
-                builder.append("Produções: ").append(producoes.isEmpty() ? "Nenhuma produção associada" : String.join(", ", producoes)).append("\n");
-
-            } else if (type.equals("Atores")) {
-
-                semata = conext.prepareStatement(
-                        "SELECT nome_atores, nascimento_atores, mandado_para_o_lobby_atores " +
-                                "FROM atores WHERE id_atores = ?");
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-                if (hahaha.next()) {
-                    String nome = hahaha.getString("nome_atores");
-                    Date nascimento = hahaha.getDate("nascimento_atores");
-                    Date falecimento = hahaha.getDate("mandado_para_o_lobby_atores");
-
-                    builder.append("Nome: ").append(nome).append("\n");
-                    builder.append("Nascimento: ").append(nascimento).append("\n");
-
-                    LocalDate nascimentoDate = nascimento.toLocalDate();
-                    LocalDate dataFinal = falecimento != null ? falecimento.toLocalDate() : LocalDate.now();
-                    int idade = Period.between(nascimentoDate, dataFinal).getYears();
-                    builder.append("Idade: ").append(idade).append(falecimento != null ? " (na data de falecimento)" : "").append("\n");
-
-                    if (falecimento != null) {
-                        builder.append("Faleceu em: ").append(falecimento).append("\n");
-                    } else {
-                        builder.append("Estado: Vivo").append("\n");
-                    }
-                }
-
-                semata = conext.prepareStatement(
-                "SELECT p.titulo_producoes FROM producoes p " +
-                    "JOIN producoes_atores pa ON p.id_producoes = pa.id_producoes " +
-                    "WHERE pa.id_atores = ?"
-                );
-                semata.setInt(1, id);
-                hahaha = semata.executeQuery();
-                while (hahaha.next()) {
-                    producoes.add(hahaha.getString("titulo_producoes"));
-                }
-                builder.append("Produções: ").append(producoes.isEmpty() ? "Nenhuma produção associada" : String.join(", ", producoes)).append("\n");
-
+                // adicionar icone depois
             }
 
-        } catch (SQLException e){
+            semata = conext.prepareStatement(
+                "SELECT g.nome_genero FROM genero g " +
+                "JOIN producoes_generos pg ON g.id_genero = pg.id_genero " +
+                "WHERE pg.id_producoes = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
+            while (hahaha.next()) {
+                generos.add(hahaha.getString("nome_genero"));
+            }
+            builder.append("Gêneros: ").append(generos.isEmpty() ? "Nenhum gênero associado" : String.join(", ", generos)).append("\n\n");
 
-            JOptionPane.showConfirmDialog(null,"Deu ruim no SQL","Fudeu", JOptionPane.ERROR_MESSAGE);
-            System.out.print("\nErro: " + e + "\nErro ao tentar acessar informações de uma celula sql");
-            return;
+            semata = conext.prepareStatement(
+                "SELECT a.nome_atores FROM atores a " +
+                "JOIN producoes_atores pa ON a.id_atores = pa.id_atores " +
+                "WHERE pa.id_producoes = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery(); // Executar a consulta
+            while (hahaha.next()) {
+                elencados.add(hahaha.getString("nome_atores"));
+            }
+            builder.append("Elenco: ").append(elencados.isEmpty() ? "Nenhum ator associado" : String.join(", ", elencados)).append("\n\n");
 
+        } else if (type.equals("Diretores")) {
+            semata = conext.prepareStatement(
+                "SELECT nome_diretor, nascimento_diretor, mandado_para_o_lobby_diretor " +
+                "FROM diretores WHERE id_diretor = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
+            if (hahaha.next()) {
+                String nome = hahaha.getString("nome_diretor");
+                Date nascimento = hahaha.getDate("nascimento_diretor");
+                Date falecimento = hahaha.getDate("mandado_para_o_lobby_diretor");
+
+                builder.append("Nome: ").append(nome).append("\n");
+                builder.append("Nascimento: ").append(nascimento).append("\n");
+
+                LocalDate nascimentoDate = nascimento.toLocalDate();
+                LocalDate dataFinal = falecimento != null ? falecimento.toLocalDate() : LocalDate.now();
+                int idade = Period.between(nascimentoDate, dataFinal).getYears();
+                builder.append("Idade: ").append(idade).append(falecimento != null ? " (na data de falecimento)" : "").append("\n");
+
+                if (falecimento != null) {
+                    builder.append("Faleceu em: ").append(falecimento).append("\n");
+                } else {
+                    builder.append("Estado: Vivo").append("\n");
+                }
+            }
+
+            semata = conext.prepareStatement(
+                "SELECT titulo_producoes FROM producoes WHERE id_diretor = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
+            while (hahaha.next()) {
+                producoes.add(hahaha.getString("titulo_producoes"));
+            }
+            builder.append("Produções: ").append(producoes.isEmpty() ? "Nenhuma produção associada" : String.join(", ", producoes)).append("\n");
+
+        } else if (type.equals("Atores")) {
+            semata = conext.prepareStatement(
+                "SELECT nome_atores, nascimento_atores, mandado_para_o_lobby_atores " +
+                "FROM atores WHERE id_atores = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
+            if (hahaha.next()) {
+                String nome = hahaha.getString("nome_atores");
+                Date nascimento = hahaha.getDate("nascimento_atores");
+                Date falecimento = hahaha.getDate("mandado_para_o_lobby_atores");
+
+                builder.append("Nome: ").append(nome).append("\n");
+                builder.append("Nascimento: ").append(nascimento).append("\n");
+
+                LocalDate nascimentoDate = nascimento.toLocalDate();
+                LocalDate dataFinal = falecimento != null ? falecimento.toLocalDate() : LocalDate.now();
+                int idade = Period.between(nascimentoDate, dataFinal).getYears();
+                builder.append("Idade: ").append(idade).append(falecimento != null ? " (na data de falecimento)" : "").append("\n");
+
+                if (falecimento != null) {
+                    builder.append("Faleceu em: ").append(falecimento).append("\n");
+                } else {
+                    builder.append("Estado: Vivo").append("\n");
+                }
+            }
+
+            semata = conext.prepareStatement(
+                "SELECT p.titulo_producoes FROM producoes p " +
+                "JOIN producoes_atores pa ON p.id_producoes = pa.id_producoes " +
+                "WHERE pa.id_atores = ?"
+            );
+            semata.setInt(1, id);
+            hahaha = semata.executeQuery();
+            while (hahaha.next()) {
+                producoes.add(hahaha.getString("titulo_producoes"));
+            }
+            builder.append("Produções: ").append(producoes.isEmpty() ? "Nenhuma produção associada" : String.join(", ", producoes)).append("\n");
         }
 
-        JPanel cinema = new JPanel(new BorderLayout(10, 10));
-        cinema.setPreferredSize(new Dimension(700, 500));
-
-        JTextArea absoluto = new JTextArea(builder.toString());
-        absoluto.setEditable(false);
-        absoluto.setWrapStyleWord(true);
-        absoluto.setLineWrap(true);
-
-        JScrollPane ystep = new JScrollPane(absoluto);
-        cinema.add(ystep, BorderLayout.CENTER);
-
-        pipoquinha.add(cinema);
-        pipoquinha.revalidate();
-        pipoquinha.repaint();
-
-
-
+    } catch (SQLException e) {
+        JOptionPane.showConfirmDialog(null, "Deu ruim no SQL: " + e.getMessage(), "Fudeu", JOptionPane.ERROR_MESSAGE);
+        System.out.println("Erro completo: " + e);
+        return;
     }
+
+    JPanel cinema = new JPanel(new BorderLayout(10, 10));
+    cinema.setPreferredSize(new Dimension(700, 500));
+
+    JTextArea absoluto = new JTextArea(builder.toString());
+    absoluto.setEditable(false);
+    absoluto.setWrapStyleWord(true);
+    absoluto.setLineWrap(true);
+
+    JScrollPane ystep = new JScrollPane(absoluto);
+    cinema.add(ystep, BorderLayout.CENTER);
+
+    pipoquinha.add(cinema);
+    pipoquinha.revalidate();
+    pipoquinha.repaint();
+}
 
     private JLabel Criacao (String type){
 
@@ -470,9 +448,10 @@ public class Nebulabrasque extends JFrame {
     private void Plasma (String type){
 
         pipoquinha.removeAll();
-        especifico = true;
+        especifico = false;
         menu = false;
         aura = false;
+        criacao = true;
 
         JPanel formacao = new JPanel(new GridLayout(0,2, 10, 10));
         formacao.setPreferredSize(new Dimension(700, 500));
@@ -481,7 +460,8 @@ public class Nebulabrasque extends JFrame {
 
             JTextField titulo_producao = new JTextField();
             JTextField data_producao = new JTextField();
-
+            JTextField numepisodios_producoes = new JTextField();
+            
             JComboBox<String> diretorCombo = new JComboBox<>();
             ComboMombo(diretorCombo, "Diretores");
 
@@ -497,6 +477,8 @@ public class Nebulabrasque extends JFrame {
             formacao.add(titulo_producao);
             formacao.add(new JLabel("Data de Lançamento (YYYY-MM-DD):"));
             formacao.add(data_producao);
+            formacao.add(new JLabel("Número de Episódios (opcional, deixe em branco para filme): "));
+            formacao.add(numepisodios_producoes);
             formacao.add(new JLabel("Diretor:"));
             formacao.add(diretorCombo);
             formacao.add(new JLabel("Gêneros:"));
@@ -505,7 +487,7 @@ public class Nebulabrasque extends JFrame {
             formacao.add(atoStep);
 
             JButton salvar = new JButton("Salvar");
-            salvar.addActionListener(e -> salveP(titulo_producao.getText(), data_producao.getText(), diretorCombo, generosList.getSelectedValuesList(), atoresList.getSelectedValuesList(), type));
+            salvar.addActionListener(e -> salveP(titulo_producao.getText(), data_producao.getText(), numepisodios_producoes.getText(), diretorCombo, generosList.getSelectedValuesList(), atoresList.getSelectedValuesList(), type));
             formacao.add(salvar);
 
         } else if (type.equals("Diretores")) {
@@ -582,79 +564,87 @@ public class Nebulabrasque extends JFrame {
         return lista.toArray(new String[0]);
     }
 
-    private void salveP(String titulo, String data, JComboBox<String> diretorCombo, List<String> generos, List<String> atores, String type){
-
+    private void salveP(String titulo, String data, String episodios, JComboBox<String> diretorCombo, List<String> generos, List<String> atores, String type){
         if(titulo.isEmpty() || data.isEmpty()){
-
-            JOptionPane.showMessageDialog(null, "Esta se esquecendo de algo?", "Usuários...", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Preencha os campos obrigatórios (Título e Data)!", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
-
         }
 
         try (Connection conext = DriverManager.getConnection(dbUrl, dbUser, dbPass)) {
+            Integer numEpisodios = null;
+            if (!episodios.isEmpty()) {
+                try {
+                    numEpisodios = Integer.parseInt(episodios);
+                    if (numEpisodios < 0) {
+                        JOptionPane.showMessageDialog(null, "Número de episódios não pode ser negativo!", "Erro", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Número de episódios deve ser um número válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
 
             PreparedStatement semata = conext.prepareStatement(
-            "INSERT INTO producoes (titulo_producoes, data_producoes, id_diretor) VALUES (?, ?, ?)",
+                "INSERT INTO producoes (titulo_producoes, data_producoes, numepisodios_producoes, id_diretor) VALUES (?, ?, ?, ?)",
                 Statement.RETURN_GENERATED_KEYS
             );
             semata.setString(1, titulo);
             semata.setDate(2, Date.valueOf(data));
+            if (numEpisodios == null || numEpisodios == 0) {
+                semata.setNull(3, Types.SMALLINT);
+            } else {
+                semata.setInt(3, numEpisodios);
+            }
             String diretorNome = (String) diretorCombo.getSelectedItem();
 
             if (diretorNome.equals("Nenhum")) {
-
-                semata.setNull(3, Types.INTEGER);
-
+                semata.setNull(4, Types.INTEGER);
             } else {
                 PreparedStatement diretorSematou = conext.prepareStatement("SELECT id_diretor FROM diretores WHERE nome_diretor = ?");
                 diretorSematou.setString(1, diretorNome);
                 ResultSet hahaha = diretorSematou.executeQuery();
-
                 if (hahaha.next()) {
-
-                    semata.setInt(3, hahaha.getInt("id_diretor"));
-
+                    semata.setInt(4, hahaha.getInt("id_diretor"));
                 } else {
-
-                    semata.setNull(3, Types.INTEGER);
-
+                    semata.setNull(4, Types.INTEGER);
                 }
             }
 
-            semata.executeUpdate();
+            int rowsAffected = semata.executeUpdate();
+            if (rowsAffected == 0) {
+                JOptionPane.showMessageDialog(null, "Erro ao inserir produção!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             ResultSet chaves = semata.getGeneratedKeys();
             int producaoId = chaves.next() ? chaves.getInt(1) : -1;
-
+            if (producaoId == -1) {
+                JOptionPane.showMessageDialog(null, "Erro ao gerar ID da produção!", "Erro", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
             for (String genero : generos) {
-
                 PreparedStatement genSemata = conext.prepareStatement("SELECT id_genero FROM genero WHERE nome_genero = ?");
                 genSemata.setString(1, genero);
                 ResultSet hahaha = genSemata.executeQuery();
-
                 if (hahaha.next()) {
-
                     PreparedStatement pgSemata = conext.prepareStatement("INSERT INTO producoes_generos (id_producoes, id_genero) VALUES (?, ?)");
                     pgSemata.setInt(1, producaoId);
                     pgSemata.setInt(2, hahaha.getInt("id_genero"));
                     pgSemata.executeUpdate();
-
                 }
             }
 
             for (String ator : atores) {
-
                 PreparedStatement atorSematou = conext.prepareStatement("SELECT id_atores FROM atores WHERE nome_atores = ?");
                 atorSematou.setString(1, ator);
                 ResultSet rs = atorSematou.executeQuery();
-
                 if (rs.next()) {
-
                     PreparedStatement paSemata = conext.prepareStatement("INSERT INTO producoes_atores (id_producoes, id_atores) VALUES (?, ?)");
                     paSemata.setInt(1, producaoId);
                     paSemata.setInt(2, rs.getInt("id_atores"));
                     paSemata.executeUpdate();
-
                 }
             }
 
@@ -662,10 +652,9 @@ public class Nebulabrasque extends JFrame {
             Ispy(type, "");
 
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Deu ruim no SQL", "Fudeo", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Deu ruim no SQL: " + e.getMessage(), "Fudeo", JOptionPane.ERROR_MESSAGE);
+            System.out.println("Erro completo: " + e);
         }
-
-
     }
 
     private void salveP2(String nome, String nascimento, String mandadoParaOLobby, String type) {
@@ -701,4 +690,3 @@ public class Nebulabrasque extends JFrame {
     }
 
 }
-
