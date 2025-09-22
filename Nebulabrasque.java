@@ -1,5 +1,3 @@
-package kocmoc;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -690,3 +688,4 @@ public class Nebulabrasque extends JFrame {
     }
 
 }
+
