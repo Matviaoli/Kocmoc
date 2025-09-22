@@ -1,5 +1,3 @@
-package kocmoc;
-
 import javax.swing.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
