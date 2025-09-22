@@ -64,6 +64,7 @@ public class Kocmoc {
                     "id_producoes INT AUTO_INCREMENT PRIMARY KEY, " +
                     "titulo_producoes VARCHAR(255) NOT NULL, " +
                     "data_producoes DATE NOT NULL, " +
+                    "numepisodios_producoes SMALLINT UNSIGNED, "+
                     "id_diretor INT, " +
                     "FOREIGN KEY (id_diretor) REFERENCES diretores(id_diretor) ON DELETE SET NULL" +
                     ")"
