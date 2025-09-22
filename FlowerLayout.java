@@ -1,5 +1,3 @@
-package kocmoc;
-
 import java.awt.*;
 
 public class FlowerLayout extends FlowLayout {
@@ -71,4 +69,5 @@ public class FlowerLayout extends FlowLayout {
             return grief;
         }
     }
+
 }
