@@ -1,4 +1,5 @@
 import javax.swing.*;
+import java.awt.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -7,6 +8,8 @@ import java.util.Locale;
 public class Kocmoc {
     public static void main(String[] args) {
 
+        String url = "jdbc:mysql://localhost:3306", user = "root", pass = "13102201";
+        boolean credencial = false;
 
         System.out.print("Iniciando tradução do JOption Pane...");
 
@@ -18,9 +21,54 @@ public class Kocmoc {
 
         System.out.print("\nTradução do JOption Pane bem sucedida!");
 
+        System.out.print("\nIniciando busca de credenciais");
+
+        do {
+            try (Connection conext = DriverManager.getConnection(url, user, pass)) {
+
+                System.out.print("\nCredenciais corretas");
+                credencial = true;
+
+            } catch (SQLException e) {
+
+                System.out.print("\nCredenciais incorretas, iniciando protocolo...");
+
+                JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+                panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+                JLabel userLabel = new JLabel("Usuário:");
+                JTextField userField = new JTextField(user, 15);
+                JLabel passLabel = new JLabel("Senha:");
+                JPasswordField passField = new JPasswordField(pass, 15);
+
+                panel.add(userLabel);
+                panel.add(userField);
+                panel.add(passLabel);
+                panel.add(passField);
+
+                int option = JOptionPane.showConfirmDialog(
+                        null,
+                        panel,
+                        "Credenciais Incorretas. Digite as corretas:",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                if (option == JOptionPane.OK_OPTION) {
+                    user = userField.getText();
+                    pass = new String(passField.getPassword());
+                } else {
+                    System.out.print("\nPrograma encerrado pelo usuário.");
+                    System.exit(1);
+                }
+
+
+            }
+        }while(credencial);
+
         System.out.print("\nIniciando tentativa de conexão com Kocmoc...");
 
-        recriacao();
+        recriacao(url, user, pass);
 
         System.out.print("\nConexão com Kocmoc bem sucedida!");
         System.out.print("\nIniciando interface Cosmos...");
@@ -28,15 +76,26 @@ public class Kocmoc {
         Nebulabrasque nebulaframe = new Nebulabrasque();
         nebulaframe.setVisible(true);
 
+        System.out.print("\nCosmos iniciada com sucesso\n\n");
+
     }
 
-    public static void recriacao(){
+    public static void recriacao(String url, String user, String pass){
 
-        String url = "jdbc:mysql://localhost:3306/kocmoc";
-        String user = "root";
-        String pass = "mysql";
+        try (Connection conext = DriverManager.getConnection(url, user, pass)) {
+            Statement semata = conext.createStatement();
+            semata.executeUpdate("CREATE DATABASE IF NOT EXISTS kocmoc");
+        } catch (SQLException e){
 
-        try (Connection conext = DriverManager.getConnection(url, user, pass);
+            JOptionPane.showConfirmDialog(null,"Deu ruim no SQL","Fudeu", JOptionPane.ERROR_MESSAGE);
+            System.out.print("\nERRO: " + e.getMessage());
+            System.out.print("\nErro ao criar Kocmoc");
+            System.exit(1);
+
+        }
+
+
+        try (Connection conext = DriverManager.getConnection(url+"/kocmoc", user, pass);
              Statement semata = conext.createStatement()){
 
             semata.executeUpdate("CREATE TABLE IF NOT EXISTS diretores (" +
@@ -51,7 +110,7 @@ public class Kocmoc {
                     "id_genero TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, " +
                     "nome_genero VARCHAR(50) NOT NULL UNIQUE)"
             );
-            
+
             String[] generosPadrao = {
                     "Ação", "Drama", "Ficção Científica", "Comédia", "Romance",
                     "Aventura", "Terror", "Suspense", "Documentário", "Fantasia"
@@ -98,7 +157,7 @@ public class Kocmoc {
         } catch (SQLException e){
 
             JOptionPane.showConfirmDialog(null,"Deu ruim no SQL","Fudeu", JOptionPane.ERROR_MESSAGE);
-            System.out.print(e.getMessage());
+            System.out.print("\nERRO: " + e.getMessage());
             System.out.print("\nErro ao tentar estabelecer conexão com Kocmoc, verifique se o comando CREATE DATABASE kocmoc foi usado, verifique se os dados de acesso do banco de dados estão certos");
             System.exit(1);
 
